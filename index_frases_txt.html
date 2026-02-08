@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>No estás solo – Pastoral de la Salud</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{
+font-family:system-ui;
+background:#fff;
+color:#333;
+padding:32px;
+display:flex;
+flex-direction:column;
+align-items:center;
+text-align:center;
+}
+.logo{width:150px;margin-bottom:20px;}
+.title{font-size:2.5rem;font-weight:700;color:#ff7a00;margin-bottom:6px;}
+.subtitle{color:#777;margin-bottom:30px;}
+.message{
+font-size:1.7rem;
+font-weight:700;
+margin-bottom:20px;
+}
+.buttons{
+display:flex;
+flex-direction:column;
+gap:12px;
+width:240px;
+}
+button{
+border:none;
+border-radius:999px;
+padding:12px;
+font-weight:600;
+cursor:pointer;
+color:#fff;
+}
+.primary{background:#ff7a00;}
+.secondary{background:#005bbb;}
+</style>
+</head>
+
+<body>
+
+<h1 class="title">No estás solo</h1>
+<h2 class="subtitle">Con Jesús te acompañamos</h2>
+
+<p id="message" class="message">Cargando mensaje...</p>
+
+<div class="buttons">
+<button class="primary" onclick="newMessage()">Más mensajes</button>
+<button class="secondary" onclick="share()">Compartir</button>
+</div>
+
+<script>
+let frases = [];
+let lastIndex = -1;
+
+async function loadFrases(){
+const res = await fetch('frases.txt');
+const text = await res.text();
+frases = text.split('\n').filter(f=>f.trim()!=='');
+newMessage();
+}
+
+function newMessage(){
+if(!frases.length) return;
+let i;
+do{
+i = Math.floor(Math.random()*frases.length);
+}while(i===lastIndex && frases.length>1);
+
+lastIndex = i;
+document.getElementById('message').innerText = '"' + frases[i] + '"';
+}
+
+async function share(){
+const content = document.getElementById('message').innerText;
+if(navigator.share){
+await navigator.share({text:content});
+}else{
+navigator.clipboard.writeText(content);
+alert("Mensaje copiado.");
+}
+}
+
+loadFrases();
+</script>
+
+</body>
+</html>

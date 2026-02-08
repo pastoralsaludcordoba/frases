@@ -55,39 +55,55 @@ color:#fff;
 <button class="secondary" onclick="share()">Compartir</button>
 </div>
 
-<script>
-let frases = [];
-let lastIndex = -1;
+<script>let frases = [];
+let orden = [];
+let posicion = 0;
 
 async function loadFrases(){
 const res = await fetch('frases.txt');
 const text = await res.text();
-frases = text.split('\n').filter(f=>f.trim()!=='');
-newMessage();
+
+frases = text.split('\\n').filter(f=>f.trim()!=='');
+
+// recuperar orden guardado
+orden = JSON.parse(localStorage.getItem('ordenFrases'));
+
+if(!orden || orden.length !== frases.length){
+orden = [...Array(frases.length).keys()];
+
+// mezclar (Fisher-Yates shuffle)
+for(let i = orden.length -1; i>0; i--){
+const j = Math.floor(Math.random()*(i+1));
+[orden[i],orden[j]]=[orden[j],orden[i]];
+}
+
+localStorage.setItem('ordenFrases',JSON.stringify(orden));
+localStorage.setItem('posicionFrases',0);
+}
+
+posicion = Number(localStorage.getItem('posicionFrases')) || 0;
+
+mostrarMensaje();
+}
+
+function mostrarMensaje(){
+
+if(posicion >= orden.length){
+posicion = 0;
+localStorage.setItem('posicionFrases',0);
+}
+
+const frase = frases[orden[posicion]];
+
+document.getElementById('message').innerText = '"' + frase + '"';
+
+localStorage.setItem('posicionFrases',posicion);
 }
 
 function newMessage(){
-if(!frases.length) return;
-let i;
-do{
-i = Math.floor(Math.random()*frases.length);
-}while(i===lastIndex && frases.length>1);
-
-lastIndex = i;
-document.getElementById('message').innerText = '"' + frases[i] + '"';
+posicion++;
+mostrarMensaje();
 }
-
-async function share(){
-const content = document.getElementById('message').innerText;
-if(navigator.share){
-await navigator.share({text:content});
-}else{
-navigator.clipboard.writeText(content);
-alert("Mensaje copiado.");
-}
-}
-
-loadFrases();
 </script>
 
 </body>

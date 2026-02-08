@@ -55,55 +55,88 @@ color:#fff;
 <button class="secondary" onclick="share()">Compartir</button>
 </div>
 
-<script>let frases = [];
-let orden = [];
-let posicion = 0;
+<script>
+  let frases = [];
+  let orden = [];
+  let posicion = 0;
 
-async function loadFrases(){
-const res = await fetch('frases.txt');
-const text = await res.text();
+  const messageEl = document.getElementById("message");
 
-frases = text.split('\\n').filter(f=>f.trim()!=='');
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
 
-// recuperar orden guardado
-orden = JSON.parse(localStorage.getItem('ordenFrases'));
+  function buildNewOrder() {
+    orden = shuffle([...Array(frases.length).keys()]);
+    posicion = 0;
+    localStorage.setItem("ordenFrases", JSON.stringify(orden));
+    localStorage.setItem("posicionFrases", String(posicion));
+  }
 
-if(!orden || orden.length !== frases.length){
-orden = [...Array(frases.length).keys()];
+  function mostrarMensaje() {
+    if (!frases.length) return;
 
-// mezclar (Fisher-Yates shuffle)
-for(let i = orden.length -1; i>0; i--){
-const j = Math.floor(Math.random()*(i+1));
-[orden[i],orden[j]]=[orden[j],orden[i]];
-}
+    if (!orden.length || orden.length !== frases.length) {
+      buildNewOrder();
+    }
 
-localStorage.setItem('ordenFrases',JSON.stringify(orden));
-localStorage.setItem('posicionFrases',0);
-}
+    if (posicion >= orden.length) {
+      buildNewOrder(); // terminó el ciclo: mezcla de nuevo y arranca
+    }
 
-posicion = Number(localStorage.getItem('posicionFrases')) || 0;
+    const frase = frases[orden[posicion]];
+    messageEl.innerText = '"' + frase + '"';
 
-mostrarMensaje();
-}
+    localStorage.setItem("posicionFrases", String(posicion));
+  }
 
-function mostrarMensaje(){
+  function newMessage() {
+    posicion = (Number(localStorage.getItem("posicionFrases")) || 0) + 1;
+    localStorage.setItem("posicionFrases", String(posicion));
+    mostrarMensaje();
+  }
 
-if(posicion >= orden.length){
-posicion = 0;
-localStorage.setItem('posicionFrases',0);
-}
+  async function loadFrases() {
+    try {
+      // cache busting: evita que el navegador quede con versiones viejas
+      const res = await fetch("frases.txt?v=" + Date.now());
 
-const frase = frases[orden[posicion]];
+      if (!res.ok) throw new Error("No se pudo cargar frases.txt (HTTP " + res.status + ")");
 
-document.getElementById('message').innerText = '"' + frase + '"';
+      const text = await res.text();
+      frases = text.split("\n").map(s => s.trim()).filter(Boolean);
 
-localStorage.setItem('posicionFrases',posicion);
-}
+      if (!frases.length) throw new Error("frases.txt está vacío");
 
-function newMessage(){
-posicion++;
-mostrarMensaje();
-}
+      // restaurar orden/posición si existe
+      try {
+        orden = JSON.parse(localStorage.getItem("ordenFrases") || "[]");
+      } catch {
+        orden = [];
+      }
+      posicion = Number(localStorage.getItem("posicionFrases")) || 0;
+
+      // si el archivo cambió (cantidad distinta), regenerar orden
+      if (!orden.length || orden.length !== frases.length) {
+        buildNewOrder();
+      }
+
+      // mostrar el actual
+      mostrarMensaje();
+    } catch (e) {
+      messageEl.innerText = "No se pudo cargar las frases. Revisá que exista frases.txt en el repositorio.";
+      console.error(e);
+    }
+  }
+
+  // Exponer para el botón onclick
+  window.newMessage = newMessage;
+
+  loadFrases();
 </script>
 
 </body>
